@@ -47,47 +47,39 @@ INSERT INTO TRANSACTION VALUES (1004, 103, 'Deposit', TO_DATE('2024-07-04', 'YYY
 INSERT INTO TRANSACTION VALUES (1005, 101, 'Deposit', TO_DATE('2024-07-05', 'YYYY-MM-DD'), 700);
 
 1.Obtain the details of customers who have both Savings and Current Account.
-SELECT c.*
-FROM CUSTOMER c
-WHERE EXISTS (
-    SELECT 1
-    FROM ACCOUNT a
-    WHERE a.CustomerID = c.CustomerID AND a.AccountType = 'Savings'
-) AND EXISTS (
-    SELECT 1
-    FROM ACCOUNT a
-    WHERE a.CustomerID = c.CustomerID AND a.AccountType = 'Current'
-);
+SELECT c.CustomerID, c.CustomerName, c.CustomerAddress
+FROM Customer c
+JOIN Account a1 ON c.CustomerID = a1.CustomerID AND a1.AccountType = 'Savings'
+JOIN Account a2 ON c.CustomerID = a2.CustomerID AND a2.AccountType = 'Current';
 
 2.Retrieve the details of branches and the number of accounts in each branch.
-SELECT b.BranchID, b.BranchName, b.BranchAddress, COUNT(a.AccountID) AS NumberOfAccounts
-FROM BRANCH b
-LEFT JOIN ACCOUNT a ON b.BranchID = a.BranchID
-GROUP BY b.BranchID, b.BranchName, b.BranchAddress;
+SELECT BranchID,  BranchName, BranchAddress,
+    (SELECT COUNT(*)
+     FROM Account a
+     WHERE a.BranchID = b.BranchID
+    ) AS NumberOfAccounts
+FROM  Branch b;
 
 3.Obtain the details of customers who have performed at least 3 transactions.
-SELECT c.*
-FROM CUSTOMER c
-JOIN ACCOUNT a ON c.CustomerID = a.CustomerID
-JOIN TRANSACTION t ON a.AccountID = t.AccountID
+SELECT c.CustomerID, c.CustomerName, c.CustomerAddress
+FROM Customer c
+JOIN Account a ON c.CustomerID = a.CustomerID
+JOIN Transaction t ON a.AccountID = t.AccountID
 GROUP BY c.CustomerID, c.CustomerName, c.CustomerAddress
 HAVING COUNT(t.TransactionID) >= 3;
 
 4.List the details of branches where the number of accounts is less than the average number of accounts in all branches.
 SELECT b.BranchID, b.BranchName, b.BranchAddress
-FROM BRANCH b
-JOIN (
-    SELECT BranchID, COUNT(AccountID) AS NumberOfAccounts
-    FROM ACCOUNT
-    GROUP BY BranchID
-) ba ON b.BranchID = ba.BranchID
-WHERE ba.NumberOfAccounts < (
-    SELECT AVG(NumberOfAccounts)
+FROM Branch b
+JOIN Account a ON b.BranchID = a.BranchID
+GROUP BY b.BranchID, b.BranchName, b.BranchAddress
+HAVING COUNT(a.AccountID) < (
+    SELECT AVG(AccountCount) 
     FROM (
-        SELECT COUNT(AccountID) AS NumberOfAccounts
-        FROM ACCOUNT
+        SELECT COUNT(AccountID) AS AccountCount
+        FROM Account
         GROUP BY BranchID
-    ) da
+    )
 );
 
 #Mongo DB
